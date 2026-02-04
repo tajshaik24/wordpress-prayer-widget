@@ -24,12 +24,6 @@ if($Save) {
     update_option('masjidi_api_key', $api_key);
     update_option('highlighted_color', $highlighted_color);
     update_option('highlighted_text_color', $highlighted_text_color);
-    
-    // Clear cached data so new settings take effect immediately
-    delete_transient('masjidi_data_' . $masjid_id_1);
-    if (!empty($masjid_id_2)) {
-        delete_transient('masjidi_data_' . $masjid_id_2);
-    }
 ?>
 <div class="alert alert-success alert-dismissible" style="margin-top:18px; padding: 12px 20px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; color: #155724;">
     <a href="#" class="close newclose" data-dismiss="alert" aria-label="close" title="close" style="float: right; font-size: 20px; text-decoration: none; color: #155724;">×</a>

@@ -32,6 +32,19 @@
         .preview-note strong {
             color: #856404;
         }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
 
         /* Widget Styles */
         .mptsi-widget { font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 420px; overflow: hidden; margin: 0 auto; }
@@ -40,6 +53,7 @@
         .mptsi-header .date { font-size: 13px; color: #555; margin: 0; }
         .mptsi-table { padding: 6px 15px 10px; }
         .mptsi-row { display: grid; grid-template-columns: 95px 1fr 1fr 1fr; padding: 10px 0; border-bottom: 1px solid #f5f5f5; align-items: center; gap: 4px; }
+        .mptsi-row.single-masjid { grid-template-columns: 100px 1fr 1fr; }
         .mptsi-row.header { border-bottom: 2px solid #eee; padding: 6px 0 8px; }
         .mptsi-row.header span { font-size: 10px; font-weight: 600; text-transform: uppercase; color: #666; letter-spacing: 0.3px; }
         .mptsi-row:last-child { border-bottom: none; }
@@ -50,6 +64,8 @@
         .mptsi-time { text-align: center; font-size: 13px; color: #666; line-height: 1.3; }
         .mptsi-iqamah { text-align: center; font-size: 14px; font-weight: 600; color: #1a1a1a; line-height: 1.3; }
         .mptsi-alert { background: #1e7b34; color: #ffffff; text-align: center; padding: 10px 14px; margin: 6px 15px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .mptsi-alert, .mptsi-alert * { color: #ffffff !important; }
+        .mptsi-header .mptsi-alert { margin: 10px 0 0 0; padding: 8px 12px; font-size: 11px; border-radius: 6px; }
         .mptsi-jumuah { padding: 12px 15px; border-top: 1px solid #eee; }
         .mptsi-jumuah-grid { display: flex; justify-content: center; gap: 0; flex-wrap: nowrap; }
         .mptsi-jumuah-item { text-align: center; padding: 4px 14px; flex-shrink: 0; }
@@ -67,122 +83,465 @@
         <h1>Prayer Times Widget Preview</h1>
 
         <div class="preview-note">
-            <strong>Current Layout:</strong>
+            <strong>Live Data from Masjidi API:</strong>
             <ol>
-                <li><strong>Azan column:</strong> Both ICF and Masjid Zakariya share the same Azan time (from ICF's API data)</li>
+                <li><strong>Azan column:</strong> Both masjids share the same Azan time (from primary masjid's API data)</li>
                 <li><strong>Iqama columns:</strong> Each masjid shows its own iqama time, <strong>except Maghrib</strong> which uses the Azan time for both</li>
                 <li><strong>Jumu'ah section:</strong> Shows Talk and Prayer times stacked, with labels below</li>
                 <li><strong>Sunrise/Sunset:</strong> Labeled with "Sunrise" and "Sunset" text</li>
             </ol>
         </div>
 
-        <div class="mptsi-widget">
-            <div class="mptsi-header">
-                <h2>Prayer Timings</h2>
-                <div class="date">Thursday, Jan 30 | 1 Rajab 1447</div>
-            </div>
-
-            <div class="mptsi-table">
-                <div class="mptsi-row header">
-                    <span></span>
-                    <span style="text-align: center;">Azan</span>
-                    <span style="text-align: center;">ICF</span>
-                    <span style="text-align: center;">Masjid Zakariya</span>
-                </div>
-
-                <!-- Fajr - Different iqama for each masjid -->
-                <div class="mptsi-row">
-                    <div class="mptsi-name">
-                        <span class="icon">🌅</span>
-                        <span>Fajr</span>
-                    </div>
-                    <div class="mptsi-time">5:52 AM</div>
-                    <div class="mptsi-iqamah">6:30 AM</div>
-                    <div class="mptsi-iqamah">6:15 AM</div>
-                </div>
-
-                <!-- Dhuhr - Different iqama for each masjid -->
-                <div class="mptsi-row">
-                    <div class="mptsi-name">
-                        <span class="icon">☀️</span>
-                        <span>Dhuhr</span>
-                    </div>
-                    <div class="mptsi-time">12:25 PM</div>
-                    <div class="mptsi-iqamah">1:30 PM</div>
-                    <div class="mptsi-iqamah">1:15 PM</div>
-                </div>
-
-                <!-- Asr - Active, Different iqama for each masjid -->
-                <div class="mptsi-row active">
-                    <div class="mptsi-name">
-                        <span class="icon">🌤️</span>
-                        <span>Asr</span>
-                    </div>
-                    <div class="mptsi-time">3:31 PM</div>
-                    <div class="mptsi-iqamah">4:30 PM</div>
-                    <div class="mptsi-iqamah">4:45 PM</div>
-                </div>
-
-                <!-- Maghrib - Uses Azan time as Iqamah for both masjids -->
-                <div class="mptsi-row">
-                    <div class="mptsi-name">
-                        <span class="icon">🌇</span>
-                        <span>Maghrib</span>
-                    </div>
-                    <div class="mptsi-time">5:28 PM</div>
-                    <div class="mptsi-iqamah">5:28 PM</div>
-                    <div class="mptsi-iqamah">5:28 PM</div>
-                </div>
-
-                <!-- Isha - Different iqama for each masjid -->
-                <div class="mptsi-row">
-                    <div class="mptsi-name">
-                        <span class="icon">🌙</span>
-                        <span>Isha</span>
-                    </div>
-                    <div class="mptsi-time">6:52 PM</div>
-                    <div class="mptsi-iqamah">7:30 PM</div>
-                    <div class="mptsi-iqamah">7:45 PM</div>
-                </div>
-            </div>
-
-            <!-- Jumu'ah Section -->
-            <div class="mptsi-jumuah">
-                <div class="mptsi-jumuah-grid">
-                    <div class="mptsi-jumuah-item">
-                        <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Talk</span> 12:30 PM</div>
-                        <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Prayer</span> 1:00 PM</div>
-                        <div class="mptsi-jumuah-label">Jumu'ah 1</div>
-                    </div>
-                    <div class="mptsi-jumuah-item">
-                        <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Talk</span> 1:30 PM</div>
-                        <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Prayer</span> 2:00 PM</div>
-                        <div class="mptsi-jumuah-label">Jumu'ah 2</div>
-                    </div>
-                    <div class="mptsi-jumuah-item">
-                        <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Talk</span> 2:30 PM</div>
-                        <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Prayer</span> 3:00 PM</div>
-                        <div class="mptsi-jumuah-label">Jumu'ah 3</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sunrise/Sunset Section -->
-            <div class="mptsi-sun">
-                <div class="mptsi-sun-item">
-                    <span>🌅</span>
-                    <span><strong>Sunrise</strong> 7:12 AM</span>
-                </div>
-                <div class="mptsi-sun-item">
-                    <span><strong>Sunset</strong> 5:28 PM</span>
-                    <span>🌇</span>
-                </div>
-            </div>
-
-            <a href="#" class="mptsi-link">
-                📅 View Monthly Prayer Schedule
-            </a>
+        <div id="widget-container">
+            <div class="loading">Loading prayer times...</div>
         </div>
     </div>
+
+    <script>
+        // Configuration - Update these masjid IDs as needed
+        const CONFIG = {
+            masjidId1: '3443',       // Primary masjid (ICF)
+            masjidId2: '50059',      // Secondary masjid (Masjid Zakariya) - leave empty for single masjid
+            masjidName1: 'ICF',
+            masjidName2: 'Masjid Zakariya',
+            apiKey: '123-test-key',
+            highlightColor: '#1e7b34',
+            highlightTextColor: '#ffffff'
+        };
+
+        // Format time to 12-hour format
+        function formatTime(timeStr) {
+            if (!timeStr || timeStr === '-' || timeStr === '' || timeStr === null || timeStr === undefined) {
+                return '-';
+            }
+
+            try {
+                // Handle "HH:MM am/pm" format from API (e.g., "05:53 am")
+                const ampmMatch = timeStr.toString().match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+                if (ampmMatch) {
+                    let hours = parseInt(ampmMatch[1]);
+                    const minutes = ampmMatch[2];
+                    const period = ampmMatch[3].toUpperCase();
+
+                    // Convert to 12-hour format display
+                    if (hours === 0) hours = 12;
+                    if (hours > 12) hours = hours - 12;
+
+                    return `${hours}:${minutes} ${period}`;
+                }
+
+                // Try parsing as ISO date string
+                let date = new Date(timeStr);
+
+                if (isNaN(date.getTime())) {
+                    // Try parsing as time only (HH:MM or HH:MM:SS)
+                    const parts = timeStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+                    if (parts) {
+                        let hours = parseInt(parts[1]);
+                        const minutes = parseInt(parts[2]);
+                        date = new Date();
+                        date.setHours(hours, minutes, 0, 0);
+                    } else {
+                        return timeStr;
+                    }
+                }
+
+                if (isNaN(date.getTime())) {
+                    return '-';
+                }
+
+                return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            } catch (e) {
+                console.error('Error parsing time:', timeStr, e);
+                return '-';
+            }
+        }
+
+        // Parse time string to minutes since midnight
+        function parseTimeToMinutes(timeStr) {
+            if (!timeStr) return null;
+
+            // Handle "HH:MM am/pm" format (e.g., "05:53 am")
+            const ampmMatch = timeStr.toString().match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+            if (ampmMatch) {
+                let hours = parseInt(ampmMatch[1]);
+                const minutes = parseInt(ampmMatch[2]);
+                const period = ampmMatch[3].toLowerCase();
+
+                if (period === 'pm' && hours !== 12) hours += 12;
+                if (period === 'am' && hours === 12) hours = 0;
+
+                return hours * 60 + minutes;
+            }
+
+            // Try ISO date
+            const date = new Date(timeStr);
+            if (!isNaN(date.getTime())) {
+                return date.getHours() * 60 + date.getMinutes();
+            }
+
+            return null;
+        }
+
+        // Get active prayer based on current time
+        function getActivePrayer(data) {
+            try {
+                const timezone = data.date?.timezone || data.timezone_for_masjid || data.timezoneId || 'America/Los_Angeles';
+                const now = new Date();
+                const currentTime = now.toLocaleTimeString('en-US', { timeZone: timezone, hour12: false, hour: '2-digit', minute: '2-digit' });
+                const currentMinutes = parseInt(currentTime.split(':')[0]) * 60 + parseInt(currentTime.split(':')[1]);
+
+                const prayers = ['fajr', 'zuhr', 'asr', 'maghrib', 'isha'];
+                const iqamaFields = {
+                    fajr: 'fajr_iqama_time',
+                    zuhr: 'zuhr_iqama_time',
+                    asr: 'asr_iqama_time',
+                    maghrib: 'magrib_start_time', // Maghrib uses azan time
+                    isha: 'isha_iqama_time'
+                };
+
+                for (const prayer of prayers) {
+                    const iqamaTime = data[iqamaFields[prayer]];
+                    const iqamaMinutes = parseTimeToMinutes(iqamaTime);
+                    if (iqamaMinutes !== null && currentMinutes < iqamaMinutes) {
+                        return prayer;
+                    }
+                }
+            } catch (e) {
+                console.error('Error determining active prayer:', e);
+            }
+            return '';
+        }
+
+        // Fetch data from Masjidi API
+        async function fetchMasjidData(masjidId) {
+            if (!masjidId) return null;
+
+            const url = `https://api.masjidiapp.com/v2/masjids/${masjidId}`;
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'apikey': CONFIG.apiKey
+                    },
+                    mode: 'cors'
+                });
+                if (!response.ok) {
+                    console.error(`HTTP Error: ${response.status} ${response.statusText}`);
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                console.log(`Fetched data for masjid ${masjidId}:`, data);
+                return data;
+            } catch (error) {
+                console.error('Masjidi API Error for masjid ' + masjidId + ':', error);
+                return null;
+            }
+        }
+
+        // Render the widget
+        function renderWidget(data1, data2) {
+            const container = document.getElementById('widget-container');
+
+            if (!data1) {
+                container.innerHTML = '<div class="error">Unable to load prayer times. Please check the Masjid ID.</div>';
+                return;
+            }
+
+            const hasTwoMasjids = CONFIG.masjidId2 && data2 !== null;
+            const timezone = data1.date?.timezone || data1.timezone_for_masjid || data1.timezoneId || 'America/Los_Angeles';
+
+            // Format date - use date from API if available
+            let todayDate;
+            if (data1.date?.date) {
+                const apiDate = new Date(data1.date.date);
+                todayDate = apiDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+            } else {
+                const now = new Date();
+                todayDate = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: timezone });
+            }
+            const hijriDate = data1.hijri_date || '';
+
+            // Get masjid names
+            let masjidName1 = CONFIG.masjidName1 || data1.title || 'Masjid 1';
+            let masjidName2 = CONFIG.masjidName2 || (data2 ? data2.title : 'Masjid 2');
+            if (masjidName1.length > 20) masjidName1 = masjidName1.substring(0, 15) + '...';
+            if (masjidName2.length > 20) masjidName2 = masjidName2.substring(0, 15) + '...';
+
+            // Get active prayer
+            const activePrayer = getActivePrayer(data1);
+
+            // Prayer definitions
+            const prayers = [
+                { key: 'fajr', label: 'Fajr', icon: '🌅', start: 'fajr_start_time', iqama: 'fajr_iqama_time' },
+                { key: 'zuhr', label: 'Dhuhr', icon: '☀️', start: 'zuhr_start_time', iqama: 'zuhr_iqama_time' },
+                { key: 'asr', label: 'Asr', icon: '🌤️', start: 'asr_start_time', iqama: 'asr_iqama_time' },
+                { key: 'maghrib', label: 'Maghrib', icon: '🌇', start: 'magrib_start_time', iqama: 'magrib_iqama_time' },
+                { key: 'isha', label: 'Isha', icon: '🌙', start: 'isha_start_time', iqama: 'isha_iqama_time' }
+            ];
+
+            // Build prayer rows
+            let prayerRows = '';
+            for (const prayer of prayers) {
+                const startTime = formatTime(data1[prayer.start]);
+                let iqamaTime1 = formatTime(data1[prayer.iqama]);
+                let iqamaTime2 = data2 ? formatTime(data2[prayer.iqama]) : '-';
+
+                // For Maghrib, use Azan time as Iqamah for both masjids
+                if (prayer.key === 'maghrib') {
+                    iqamaTime1 = startTime;
+                    iqamaTime2 = startTime;
+                }
+
+                const isActive = activePrayer === prayer.key;
+                const rowClass = `mptsi-row ${isActive ? 'active' : ''} ${!hasTwoMasjids ? 'single-masjid' : ''}`;
+
+                prayerRows += `
+                    <div class="${rowClass}">
+                        <div class="mptsi-name">
+                            <span class="icon">${prayer.icon}</span>
+                            <span>${prayer.label}</span>
+                        </div>
+                        <div class="mptsi-time">${startTime}</div>
+                        <div class="mptsi-iqamah">${iqamaTime1}</div>
+                        ${hasTwoMasjids ? `<div class="mptsi-iqamah">${iqamaTime2}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            // Iqamah change alert (from API field)
+            const iqamahChange = data1.last_iqamah_time_change || '';
+            const alertHtml = iqamahChange ? `<div class="mptsi-alert">${iqamahChange}</div>` : '';
+
+            // Build upcoming changes banner based on next_iqamah_change data
+            let changesHtml = '';
+
+            // Helper function to get changes for a masjid
+            function getChangesForMasjid(data, masjidName) {
+                const nextChange = data.next_iqamah_change;
+                if (!nextChange || !nextChange.change_date) {
+                    return null;
+                }
+
+                // Parse date as local time (not UTC) to avoid timezone issues
+                const dateParts = nextChange.change_date.split('-');
+                const changeDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                changeDate.setHours(0, 0, 0, 0);
+
+                // Only include if change date is today or in the future
+                if (changeDate < today) {
+                    return null;
+                }
+
+                // Compare current times with next times to find what's changing
+                const prayerFields = {
+                    'Fajr': { current: 'fajr_iqama_time', next: 'fajr_iqama' },
+                    'Dhuhr': { current: 'zuhr_iqama_time', next: 'zuhr_iqama' },
+                    'Asr': { current: 'asr_iqama_time', next: 'asr_iqama' },
+                    'Isha': { current: 'isha_iqama_time', next: 'isha_iqama' }
+                };
+
+                const changes = [];
+                for (const [prayer, fields] of Object.entries(prayerFields)) {
+                    const currentTime = data[fields.current];
+                    const nextTime = nextChange[fields.next];
+
+                    if (nextTime && currentTime !== nextTime) {
+                        changes.push(`${prayer} ${formatTime(currentTime)} → ${formatTime(nextTime)}`);
+                    }
+                }
+
+                if (changes.length > 0) {
+                    return {
+                        masjidName: masjidName,
+                        changeDate: changeDate,
+                        changeDateStr: changeDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+                        changes: changes
+                    };
+                }
+                return null;
+            }
+
+            // Get changes for both masjids
+            const changes1 = getChangesForMasjid(data1, masjidName1);
+            const changes2 = data2 ? getChangesForMasjid(data2, masjidName2) : null;
+
+            // Build merged banner
+            if (changes1 || changes2) {
+                let bannerContent = '';
+
+                // Check if both have changes on the same date
+                if (changes1 && changes2 && changes1.changeDateStr === changes2.changeDateStr) {
+                    // Same date - merge into one banner
+                    bannerContent = `Iqamah changing ${changes1.changeDateStr}:<br>`;
+                    bannerContent += `<strong>${changes1.masjidName}</strong>: ${changes1.changes.join(', ')}<br>`;
+                    bannerContent += `<strong>${changes2.masjidName}</strong>: ${changes2.changes.join(', ')}`;
+                } else {
+                    // Different dates or only one masjid - show separately
+                    const parts = [];
+                    if (changes1) {
+                        parts.push(`<strong>${changes1.masjidName}</strong> changing ${changes1.changeDateStr}: ${changes1.changes.join(', ')}`);
+                    }
+                    if (changes2) {
+                        parts.push(`<strong>${changes2.masjidName}</strong> changing ${changes2.changeDateStr}: ${changes2.changes.join(', ')}`);
+                    }
+                    bannerContent = parts.join('<br>');
+                }
+
+                changesHtml = `<div class="mptsi-alert">${bannerContent}</div>`;
+            }
+
+            // Jumuah times - handle both array format and legacy format
+            let jumuahHtml = '';
+            const jumuahTimes = [];
+
+            // Check for array format first (new API format)
+            if (data1.jumma && Array.isArray(data1.jumma) && data1.jumma.length > 0) {
+                data1.jumma.forEach((j, index) => {
+                    const talk = formatTime(j.azan_time);
+                    const prayer = formatTime(j.iqama_time);
+                    if (prayer && prayer !== '-') {
+                        jumuahTimes.push({
+                            talk: talk,
+                            prayer: prayer,
+                            label: `Jumu'ah ${index + 1}`,
+                            masjid: ''
+                        });
+                    }
+                });
+            } else {
+                // Fallback to legacy format (jumma1_iqama, jumma2_iqama, etc.)
+                const getJumuahData = (num) => {
+                    const prayerM1 = formatTime(data1[`jumma${num}_iqama`]);
+                    const prayerM2 = data2 ? formatTime(data2[`jumma${num}_iqama`]) : '';
+                    let talkM1 = formatTime(data1[`jumma${num}_azan`]) || formatTime(data1[`jumma${num}_start_time`]);
+
+                    const m1Valid = prayerM1 && prayerM1 !== '-';
+                    const m2Valid = prayerM2 && prayerM2 !== '-';
+
+                    if (m1Valid || m2Valid) {
+                        return {
+                            talk: talkM1,
+                            prayer: m1Valid ? prayerM1 : prayerM2,
+                            label: `Jumu'ah ${num}`,
+                            masjid: (m1Valid && m2Valid) ? '' : (m1Valid ? masjidName1 : masjidName2)
+                        };
+                    }
+                    return null;
+                };
+
+                [1, 2, 3].forEach(num => {
+                    const jData = getJumuahData(num);
+                    if (jData) jumuahTimes.push(jData);
+                });
+            }
+
+            if (jumuahTimes.length > 0) {
+                let jumuahItems = '';
+                for (const j of jumuahTimes) {
+                    const talkHtml = (j.talk && j.talk !== '-') ?
+                        `<div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Talk</span> ${j.talk}</div>` : '';
+                    const masjidHtml = j.masjid ?
+                        `<div style="font-size: 9px; color: #0066cc; margin-top: 2px;">${j.masjid}</div>` : '';
+
+                    jumuahItems += `
+                        <div class="mptsi-jumuah-item">
+                            ${talkHtml}
+                            <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Prayer</span> ${j.prayer}</div>
+                            <div class="mptsi-jumuah-label">${j.label}</div>
+                            ${masjidHtml}
+                        </div>
+                    `;
+                }
+                jumuahHtml = `
+                    <div class="mptsi-jumuah">
+                        <div class="mptsi-jumuah-grid">${jumuahItems}</div>
+                    </div>
+                `;
+            }
+
+            // Sunrise/Sunset
+            const sunrise = formatTime(data1.shuruq);
+            const sunset = formatTime(data1.magrib_start_time);
+            const sunHtml = (sunrise && sunrise !== '-') || (sunset && sunset !== '-') ? `
+                <div class="mptsi-sun">
+                    <div class="mptsi-sun-item">
+                        <span>🌅</span>
+                        <span><strong>Sunrise</strong> ${sunrise}</span>
+                    </div>
+                    <div class="mptsi-sun-item">
+                        <span><strong>Sunset</strong> ${sunset}</span>
+                        <span>🌇</span>
+                    </div>
+                </div>
+            ` : '';
+
+            // Full widget HTML
+            container.innerHTML = `
+                <div class="mptsi-widget">
+                    <div class="mptsi-header">
+                        <h2>Prayer Timings</h2>
+                        <div class="date">${todayDate}${hijriDate ? ' | ' + hijriDate : ''}</div>
+                        ${changesHtml}
+                    </div>
+
+                    <div class="mptsi-table">
+                        <div class="mptsi-row header ${!hasTwoMasjids ? 'single-masjid' : ''}">
+                            <span></span>
+                            <span style="text-align: center;">Azan</span>
+                            <span style="text-align: center;">${hasTwoMasjids ? masjidName1 : 'Iqamah'}</span>
+                            ${hasTwoMasjids ? `<span style="text-align: center;">${masjidName2}</span>` : ''}
+                        </div>
+                        ${prayerRows}
+                    </div>
+
+                    ${alertHtml}
+                    ${jumuahHtml}
+                    ${sunHtml}
+
+                    <a href="https://www.masjidiapp.com/IqamaCalculator/Customized_UI_Yearly-3.htm?download=1&masjid_id=${CONFIG.masjidId1}" class="mptsi-link" target="_blank">
+                        📅 View Monthly Prayer Schedule
+                    </a>
+                </div>
+            `;
+        }
+
+        // Initialize
+        async function init() {
+            const container = document.getElementById('widget-container');
+            container.innerHTML = '<div class="loading">Loading prayer times...</div>';
+
+            try {
+                const [data1, data2] = await Promise.all([
+                    fetchMasjidData(CONFIG.masjidId1),
+                    CONFIG.masjidId2 ? fetchMasjidData(CONFIG.masjidId2) : Promise.resolve(null)
+                ]);
+
+                // Debug: log the API response to see the format
+                console.log('API Response for Masjid 1:', data1);
+                if (data2) console.log('API Response for Masjid 2:', data2);
+
+                // Only render once data is loaded
+                if (data1) {
+                    renderWidget(data1, data2);
+                } else {
+                    container.innerHTML = '<div class="error">Unable to load prayer times. Please check the Masjid ID or API key.</div>';
+                }
+            } catch (error) {
+                console.error('Error initializing widget:', error);
+                container.innerHTML = '<div class="error">Error loading prayer times. Please try again.</div>';
+            }
+        }
+
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
 </body>
 </html>

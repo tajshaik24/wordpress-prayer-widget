@@ -18,22 +18,14 @@ if (!function_exists("mptsi_fetch_masjidi_data")) {
         if (empty($masjid_id)) {
             return null;
         }
-        
-        // Cache key for transient
-        $cache_key = 'masjidi_data_' . $masjid_id;
-        $cached = get_transient($cache_key);
-        
-        if ($cached !== false) {
-            return $cached;
-        }
-        
-        // Fetch from Masjidi API
+
+        // Fetch from Masjidi API (no caching - always fetch fresh data)
         $url = "https://api.masjidiapp.com/v2/masjids/{$masjid_id}";
-        
+
         // API key - get from options or use default test key
         $api_key = get_option('masjidi_api_key', '123-test-key');
         $api_key = apply_filters('masjidi_api_key', $api_key);
-        
+
         $response = wp_remote_get($url, array(
             'timeout' => 15,
             'headers' => array(
@@ -41,26 +33,24 @@ if (!function_exists("mptsi_fetch_masjidi_data")) {
                 'apikey' => $api_key,
             )
         ));
-        
+
         if (is_wp_error($response)) {
             error_log('Masjidi API Error: ' . $response->get_error_message());
             return null;
         }
-        
+
         $response_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
-        
+
         if ($response_code == 200) {
             $data = json_decode($body);
             if ($data) {
-                // Cache for 5 minutes
-                set_transient($cache_key, $data, 5 * MINUTE_IN_SECONDS);
                 return $data;
             }
         } else {
             error_log('Masjidi API Error: HTTP ' . $response_code . ' - ' . $body);
         }
-        
+
         return null;
     }
 }
@@ -80,6 +70,96 @@ if (!function_exists("mptsi_format_time")) {
         }
         
         return date("g:i A", $timestamp);
+    }
+}
+
+/**
+ * Get upcoming iqamah changes for a masjid (returns array, not HTML)
+ */
+if (!function_exists("mptsi_get_iqamah_changes")) {
+    function mptsi_get_iqamah_changes($data, $masjid_name) {
+        if (!isset($data->next_iqamah_change) || !isset($data->next_iqamah_change->change_date)) {
+            return null;
+        }
+
+        $next_change = $data->next_iqamah_change;
+        $change_date = strtotime($next_change->change_date);
+        $today = strtotime('today');
+
+        // Only include if change date is today or in the future
+        if ($change_date < $today) {
+            return null;
+        }
+
+        // Compare current times with next times to find what's changing
+        $prayer_fields = [
+            'Fajr' => ['current' => 'fajr_iqama_time', 'next' => 'fajr_iqama'],
+            'Dhuhr' => ['current' => 'zuhr_iqama_time', 'next' => 'zuhr_iqama'],
+            'Asr' => ['current' => 'asr_iqama_time', 'next' => 'asr_iqama'],
+            'Isha' => ['current' => 'isha_iqama_time', 'next' => 'isha_iqama']
+        ];
+
+        $changes = [];
+        foreach ($prayer_fields as $prayer => $fields) {
+            $current_field = $fields['current'];
+            $next_field = $fields['next'];
+
+            $current_time = isset($data->$current_field) ? $data->$current_field : '';
+            $next_time = isset($next_change->$next_field) ? $next_change->$next_field : '';
+
+            // Show if time is different
+            if (!empty($next_time) && $current_time !== $next_time) {
+                $changes[] = $prayer . ' ' . mptsi_format_time($current_time) . ' → ' . mptsi_format_time($next_time);
+            }
+        }
+
+        if (!empty($changes)) {
+            return [
+                'masjid_name' => $masjid_name,
+                'change_date' => $change_date,
+                'change_date_str' => date('D, M j', $change_date),
+                'changes' => $changes
+            ];
+        }
+
+        return null;
+    }
+}
+
+/**
+ * Build merged iqamah changes banner for one or two masjids
+ */
+if (!function_exists("mptsi_build_merged_changes_banner")) {
+    function mptsi_build_merged_changes_banner($changes1, $changes2 = null, $text_color = '#ffffff') {
+        if (!$changes1 && !$changes2) {
+            return '';
+        }
+
+        // Use inline styles to override Elementor/theme CSS
+        $strong_style = 'style="color: ' . esc_attr($text_color) . ' !important;"';
+        $span_style = 'style="color: ' . esc_attr($text_color) . ' !important;"';
+
+        $banner_content = '';
+
+        // Check if both have changes on the same date
+        if ($changes1 && $changes2 && $changes1['change_date_str'] === $changes2['change_date_str']) {
+            // Same date - merge into one banner
+            $banner_content = '<span ' . $span_style . '>Iqamah changing ' . esc_html($changes1['change_date_str']) . ':</span><br>';
+            $banner_content .= '<strong ' . $strong_style . '>' . esc_html($changes1['masjid_name']) . '</strong>: <span ' . $span_style . '>' . esc_html(implode(', ', $changes1['changes'])) . '</span><br>';
+            $banner_content .= '<strong ' . $strong_style . '>' . esc_html($changes2['masjid_name']) . '</strong>: <span ' . $span_style . '>' . esc_html(implode(', ', $changes2['changes'])) . '</span>';
+        } else {
+            // Different dates or only one masjid - show separately
+            $parts = [];
+            if ($changes1) {
+                $parts[] = '<strong ' . $strong_style . '>' . esc_html($changes1['masjid_name']) . '</strong> <span ' . $span_style . '>changing ' . esc_html($changes1['change_date_str']) . ': ' . esc_html(implode(', ', $changes1['changes'])) . '</span>';
+            }
+            if ($changes2) {
+                $parts[] = '<strong ' . $strong_style . '>' . esc_html($changes2['masjid_name']) . '</strong> <span ' . $span_style . '>changing ' . esc_html($changes2['change_date_str']) . ': ' . esc_html(implode(', ', $changes2['changes'])) . '</span>';
+            }
+            $banner_content = implode('<br>', $parts);
+        }
+
+        return $banner_content;
     }
 }
 
@@ -136,6 +216,14 @@ if (!function_exists("mptsi_masjidi_prayer_times_shortcode")) {
         $masjid_name_2 = get_option('masjid_name_2', 'Masjid 2');
         $highlighted_color = get_option('highlighted_color', '#1e7b34');
         $highlighted_text_color = get_option('highlighted_text_color', '#ffffff');
+
+        // Fallback to defaults if empty
+        if (empty($highlighted_color)) {
+            $highlighted_color = '#1e7b34';
+        }
+        if (empty($highlighted_text_color)) {
+            $highlighted_text_color = '#ffffff';
+        }
         
         // Fetch data for both masjids
         $data1 = mptsi_fetch_masjidi_data($masjid_id_1);
@@ -196,6 +284,8 @@ if (!function_exists("mptsi_masjidi_prayer_times_shortcode")) {
             .mptsi-time { text-align: center; font-size: 13px; color: #666; line-height: 1.3; }
             .mptsi-iqamah { text-align: center; font-size: 14px; font-weight: 600; color: #1a1a1a; line-height: 1.3; }
             .mptsi-alert { background: <?php echo esc_attr($highlighted_color); ?>; color: <?php echo esc_attr($highlighted_text_color); ?>; text-align: center; padding: 10px 14px; margin: 6px 15px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+            .mptsi-alert, .mptsi-alert * { color: <?php echo esc_attr($highlighted_text_color); ?> !important; }
+            .mptsi-header .mptsi-alert { margin: 10px 0 0 0; padding: 8px 12px; font-size: 11px; border-radius: 6px; }
             .mptsi-jumuah { padding: 12px 15px; border-top: 1px solid #eee; }
             .mptsi-jumuah-grid { display: flex; justify-content: center; gap: 0; flex-wrap: nowrap; }
             .mptsi-jumuah-item { text-align: center; padding: 4px 14px; flex-shrink: 0; }
@@ -234,10 +324,19 @@ if (!function_exists("mptsi_masjidi_prayer_times_shortcode")) {
             }
         </style>
         
+        <?php
+        // Build merged changes banner for both masjids
+        $changes_1 = mptsi_get_iqamah_changes($data1, $masjid_name_1);
+        $changes_2 = $data2 ? mptsi_get_iqamah_changes($data2, $masjid_name_2) : null;
+        $changes_banner = mptsi_build_merged_changes_banner($changes_1, $changes_2, $highlighted_text_color);
+        ?>
         <div class="mptsi-widget">
             <div class="mptsi-header">
                 <h2>Prayer Timings</h2>
                 <div class="date"><?php echo esc_html($today_view_date); ?><?php if (!empty($hijri_date)) echo ' | ' . esc_html($hijri_date); ?></div>
+                <?php if (!empty($changes_banner)): ?>
+                <div class="mptsi-alert"><?php echo $changes_banner; ?></div>
+                <?php endif; ?>
             </div>
             
             <div class="mptsi-table">
