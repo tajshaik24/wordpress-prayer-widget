@@ -14,7 +14,8 @@ if($Save) {
     $api_key = sanitize_text_field($_POST['masjidi_api_key'] ?? '');
     $highlighted_color = sanitize_text_field($_POST['highlighted_color'] ?? '');
     $highlighted_text_color = sanitize_text_field($_POST['highlighted_text_color'] ?? '');
-    
+    $ramadan_timetable_url = esc_url_raw($_POST['ramadan_timetable_url'] ?? '');
+
     // Save settings
     update_option('masjid_id', $masjid_id_1);
     update_option('masjid_id_1', $masjid_id_1);
@@ -24,6 +25,7 @@ if($Save) {
     update_option('masjidi_api_key', $api_key);
     update_option('highlighted_color', $highlighted_color);
     update_option('highlighted_text_color', $highlighted_text_color);
+    update_option('ramadan_timetable_url', $ramadan_timetable_url);
 ?>
 <div class="alert alert-success alert-dismissible" style="margin-top:18px; padding: 12px 20px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; color: #155724;">
     <a href="#" class="close newclose" data-dismiss="alert" aria-label="close" title="close" style="float: right; font-size: 20px; text-decoration: none; color: #155724;">×</a>
@@ -42,6 +44,7 @@ $masjid_name_2 = get_option('masjid_name_2', '');
 $api_key = get_option('masjidi_api_key', '123-test-key');
 $highlighted_color = get_option('highlighted_color', '#1e7b34');
 $highlighted_text_color = get_option('highlighted_text_color', '#ffffff');
+$ramadan_timetable_url = get_option('ramadan_timetable_url', '');
 
 if(empty($highlighted_color)){
     $highlighted_color = '#1e7b34';
@@ -109,6 +112,15 @@ if(empty($highlighted_text_color)){
             </div>
         </div>
     </div>
+</div>
+
+<div style="background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0; margin-bottom: 25px;">
+    <h4 style="margin-top: 0; margin-bottom: 15px; color: #333; font-size: 16px;">🌙 Ramadan Timetable</h4>
+    <div style="margin-bottom: 10px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;"><?php echo esc_html('Timetable URL');?></label>
+        <input style="width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;" type="url" name="ramadan_timetable_url" id="ramadan_timetable_url" value="<?php echo esc_attr($ramadan_timetable_url); ?>" placeholder="https://example.com/ramadan-timetable.pdf">
+    </div>
+    <p style="margin: 0; font-size: 12px; color: #666;">When set, a "View Ramadan Timetable" link will appear at the bottom of the widget.</p>
 </div>
 
 <div style="margin-bottom: 25px;">

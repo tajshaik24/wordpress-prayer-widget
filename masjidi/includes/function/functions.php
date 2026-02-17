@@ -216,6 +216,7 @@ if (!function_exists("mptsi_masjidi_prayer_times_shortcode")) {
         $masjid_name_2 = get_option('masjid_name_2', 'Masjid 2');
         $highlighted_color = get_option('highlighted_color', '#1e7b34');
         $highlighted_text_color = get_option('highlighted_text_color', '#ffffff');
+        $ramadan_timetable_url = get_option('ramadan_timetable_url', '');
 
         // Fallback to defaults if empty
         if (empty($highlighted_color)) {
@@ -294,8 +295,11 @@ if (!function_exists("mptsi_masjidi_prayer_times_shortcode")) {
             .mptsi-jumuah-label { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 0.3px; margin-top: 2px; }
             .mptsi-sun { display: flex; justify-content: space-between; padding: 10px 15px; background: #f8f9fa; border-top: 1px solid #eee; }
             .mptsi-sun-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #333; }
-            .mptsi-link { display: block; text-align: center; padding: 12px; background: #f0f7ff; color: #0066cc; text-decoration: none; font-size: 13px; font-weight: 500; border-top: 1px solid #e0e0e0; border-radius: 0 0 12px 12px; }
+            .mptsi-link { display: block; text-align: center; padding: 12px; background: #f0f7ff; color: #0066cc; text-decoration: none; font-size: 13px; font-weight: 500; border-top: 1px solid #e0e0e0; }
             .mptsi-link:hover { background: #e0efff; }
+            .mptsi-link-ramadan { display: block; text-align: center; padding: 12px; background: #1a1a2e; color: #c8a86b; text-decoration: none; font-size: 13px; font-weight: 500; border-top: 1px solid #2d2d4e; border-radius: 0 0 12px 12px; }
+            .mptsi-link-ramadan:hover { background: #16213e; color: #d4b97a; }
+            .mptsi-link.mptsi-link-last { border-radius: 0 0 12px 12px; }
             
             /* Tablet/iPad styles */
             @media (min-width: 481px) and (max-width: 1024px) {
@@ -511,9 +515,14 @@ if (!function_exists("mptsi_masjidi_prayer_times_shortcode")) {
             </div>
             <?php endif; ?>
             
-            <a href="https://www.masjidiapp.com/IqamaCalculator/Customized_UI_Yearly-3.htm?download=1&masjid_id=<?php echo urlencode($masjid_id_1); ?>" class="mptsi-link" target="_blank">
+            <a href="https://www.masjidiapp.com/IqamaCalculator/Customized_UI_Yearly-3.htm?download=1&masjid_id=<?php echo urlencode($masjid_id_1); ?>" class="mptsi-link<?php echo empty($ramadan_timetable_url) ? ' mptsi-link-last' : ''; ?>" target="_blank">
                 📅 View Monthly Prayer Schedule
             </a>
+            <?php if (!empty($ramadan_timetable_url)): ?>
+            <a href="<?php echo esc_url($ramadan_timetable_url); ?>" class="mptsi-link-ramadan" target="_blank">
+                🌙 View Ramadan Timetable
+            </a>
+            <?php endif; ?>
         </div>
         <?php
         return ob_get_clean();
