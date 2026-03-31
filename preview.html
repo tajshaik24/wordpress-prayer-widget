@@ -67,9 +67,11 @@
         .mptsi-alert, .mptsi-alert * { color: #ffffff !important; }
         .mptsi-header .mptsi-alert { margin: 10px 0 0 0; padding: 8px 12px; font-size: 11px; border-radius: 6px; }
         .mptsi-jumuah { padding: 12px 15px; border-top: 1px solid #eee; }
-        .mptsi-jumuah-grid { display: flex; justify-content: center; gap: 0; flex-wrap: nowrap; }
-        .mptsi-jumuah-item { text-align: center; padding: 4px 14px; flex-shrink: 0; }
-        .mptsi-jumuah-item:not(:last-child) { border-right: 1px solid #ddd; }
+        .mptsi-jumuah-grid { display: flex; justify-content: center; gap: 0; flex-wrap: wrap; }
+        .mptsi-jumuah-row { display: flex; justify-content: center; gap: 0; width: 100%; }
+        .mptsi-jumuah-row:not(:last-child) { border-bottom: 1px solid #eee; margin-bottom: 8px; padding-bottom: 8px; }
+        .mptsi-jumuah-item { text-align: center; padding: 4px 14px; flex: 1; }
+        .mptsi-jumuah-row .mptsi-jumuah-item:not(:last-child) { border-right: 1px solid #ddd; }
         .mptsi-jumuah-time { font-size: 16px; font-weight: 600; color: #1a1a1a; }
         .mptsi-jumuah-label { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 0.3px; margin-top: 2px; }
         .mptsi-sun { display: flex; justify-content: space-between; padding: 10px 15px; background: #f8f9fa; border-top: 1px solid #eee; }
@@ -89,7 +91,7 @@
             <strong>Live Data from Masjidi API:</strong>
             <ol>
                 <li><strong>Azan column:</strong> Both masjids share the same Azan time (from primary masjid's API data)</li>
-                <li><strong>Iqama columns:</strong> Each masjid shows its own iqama time, <strong>except Maghrib</strong> which uses the Azan time for both</li>
+                <li><strong>Iqama columns:</strong> Each masjid shows its own iqama time from the API</li>
                 <li><strong>Jumu'ah section:</strong> Shows Talk and Prayer times stacked, with labels below</li>
                 <li><strong>Sunrise/Sunset:</strong> Labeled with "Sunrise" and "Sunset" text</li>
                 <li><strong>Ramadan Timetable:</strong> Set <code>ramadanTimetableUrl</code> in CONFIG (or the plugin settings) to show a 🌙 View Ramadan Timetable link at the bottom of the widget</li>
@@ -111,7 +113,7 @@
             apiKey: '123-test-key',
             highlightColor: '#1e7b34',
             highlightTextColor: '#ffffff',
-            ramadanTimetableUrl: 'https://icfbayarea.com/wp-content/uploads/2026/02/Ramadan2026Calendar.pdf'  // Set a URL to show the Ramadan Timetable link
+            ramadanTimetableUrl: ''  // Set a URL to show the Ramadan Timetable link
         };
 
         // Format time to 12-hour format
@@ -201,7 +203,7 @@
                     fajr: 'fajr_iqama_time',
                     zuhr: 'zuhr_iqama_time',
                     asr: 'asr_iqama_time',
-                    maghrib: 'magrib_start_time', // Maghrib uses azan time
+                    maghrib: 'magrib_iqama_time',
                     isha: 'isha_iqama_time'
                 };
 
@@ -222,7 +224,7 @@
         async function fetchMasjidData(masjidId) {
             if (!masjidId) return null;
 
-            const url = `https://api.masjidiapp.com/v2/masjids/${masjidId}`;
+            const url = `https://api.masjidiapp.com/v2/masjids/${masjidId}?_t=${Date.now()}`;
             try {
                 const response = await fetch(url, {
                     method: 'GET',
@@ -293,11 +295,6 @@
                 let iqamaTime1 = formatTime(data1[prayer.iqama]);
                 let iqamaTime2 = data2 ? formatTime(data2[prayer.iqama]) : '-';
 
-                // For Maghrib, use Azan time as Iqamah for both masjids
-                if (prayer.key === 'maghrib') {
-                    iqamaTime1 = startTime;
-                    iqamaTime2 = startTime;
-                }
 
                 const isActive = activePrayer === prayer.key;
                 const rowClass = `mptsi-row ${isActive ? 'active' : ''} ${!hasTwoMasjids ? 'single-masjid' : ''}`;
@@ -403,67 +400,85 @@
             let jumuahHtml = '';
             const jumuahTimes = [];
 
-            // Check for array format first (new API format)
-            if (data1.jumma && Array.isArray(data1.jumma) && data1.jumma.length > 0) {
-                data1.jumma.forEach((j, index) => {
-                    const talk = formatTime(j.azan_time);
-                    const prayer = formatTime(j.iqama_time);
-                    if (prayer && prayer !== '-') {
-                        jumuahTimes.push({
-                            talk: talk,
-                            prayer: prayer,
-                            label: `Jumu'ah ${index + 1}`,
-                            masjid: ''
-                        });
+            // Get jumuah data from either array format or legacy fields
+            function getJumuahFromMasjid(data) {
+                const results = [];
+                if (data && data.jumma && Array.isArray(data.jumma) && data.jumma.length > 0) {
+                    data.jumma.forEach((j, index) => {
+                        results.push({ talk: formatTime(j.azan_time), prayer: formatTime(j.iqama_time) });
+                    });
+                } else if (data) {
+                    for (let num = 1; num <= 3; num++) {
+                        const prayer = formatTime(data[`jumma${num}_iqama`]);
+                        const talk = formatTime(data[`jumma${num}_azan`]) || formatTime(data[`jumma${num}_start_time`]);
+                        results.push({ talk, prayer });
                     }
-                });
-            } else {
-                // Fallback to legacy format (jumma1_iqama, jumma2_iqama, etc.)
-                const getJumuahData = (num) => {
-                    const prayerM1 = formatTime(data1[`jumma${num}_iqama`]);
-                    const prayerM2 = data2 ? formatTime(data2[`jumma${num}_iqama`]) : '';
-                    let talkM1 = formatTime(data1[`jumma${num}_azan`]) || formatTime(data1[`jumma${num}_start_time`]);
+                }
+                return results;
+            }
 
-                    const m1Valid = prayerM1 && prayerM1 !== '-';
-                    const m2Valid = prayerM2 && prayerM2 !== '-';
+            const jumuahM1 = getJumuahFromMasjid(data1);
+            const jumuahM2 = data2 ? getJumuahFromMasjid(data2) : [];
+            const maxJumuah = Math.max(jumuahM1.length, jumuahM2.length);
 
-                    if (m1Valid || m2Valid) {
-                        return {
-                            talk: talkM1,
-                            prayer: m1Valid ? prayerM1 : prayerM2,
-                            label: `Jumu'ah ${num}`,
-                            masjid: (m1Valid && m2Valid) ? '' : (m1Valid ? masjidName1 : masjidName2)
-                        };
+            for (let i = 0; i < maxJumuah; i++) {
+                const m1 = jumuahM1[i] || { talk: '', prayer: '' };
+                const m2 = jumuahM2[i] || { talk: '', prayer: '' };
+                const m1Valid = m1.prayer && m1.prayer !== '-';
+                const m2Valid = m2.prayer && m2.prayer !== '-';
+                const label = `Jumu'ah ${i + 1}`;
+
+                if (m1Valid && m2Valid) {
+                    if (m1.prayer === m2.prayer && m1.talk === m2.talk) {
+                        jumuahTimes.push({ talk: m1.talk, prayer: m1.prayer, label, masjid: '' });
+                    } else {
+                        jumuahTimes.push({ talk: m1.talk, prayer: m1.prayer, label, masjid: masjidName1 });
+                        jumuahTimes.push({ talk: m2.talk, prayer: m2.prayer, label, masjid: masjidName2 });
                     }
-                    return null;
-                };
-
-                [1, 2, 3].forEach(num => {
-                    const jData = getJumuahData(num);
-                    if (jData) jumuahTimes.push(jData);
-                });
+                } else if (m1Valid) {
+                    jumuahTimes.push({ talk: m1.talk, prayer: m1.prayer, label, masjid: masjidName1 });
+                } else if (m2Valid) {
+                    jumuahTimes.push({ talk: m2.talk, prayer: m2.prayer, label, masjid: masjidName2 });
+                }
             }
 
             if (jumuahTimes.length > 0) {
-                let jumuahItems = '';
+                // Group jumuah times by label so paired masjids stay on the same row
+                const groupedRows = [];
+                let currentLabel = null;
+                let currentGroup = [];
                 for (const j of jumuahTimes) {
-                    const talkHtml = (j.talk && j.talk !== '-') ?
-                        `<div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Talk</span> ${j.talk}</div>` : '';
-                    const masjidHtml = j.masjid ?
-                        `<div style="font-size: 9px; color: #0066cc; margin-top: 2px;">${j.masjid}</div>` : '';
+                    if (j.label !== currentLabel) {
+                        if (currentGroup.length > 0) groupedRows.push(currentGroup);
+                        currentGroup = [j];
+                        currentLabel = j.label;
+                    } else {
+                        currentGroup.push(j);
+                    }
+                }
+                if (currentGroup.length > 0) groupedRows.push(currentGroup);
 
-                    jumuahItems += `
-                        <div class="mptsi-jumuah-item">
-                            ${talkHtml}
-                            <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Prayer</span> ${j.prayer}</div>
-                            <div class="mptsi-jumuah-label">${j.label}</div>
-                            ${masjidHtml}
-                        </div>
-                    `;
+                let rowsHtml = '';
+                for (const group of groupedRows) {
+                    let itemsHtml = '';
+                    for (const j of group) {
+                        const talkHtml = (j.talk && j.talk !== '-') ?
+                            `<div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Talk</span> ${j.talk}</div>` : '';
+                        const masjidHtml = j.masjid ?
+                            ` <span style="font-size: 9px; color: #0066cc;">(${j.masjid})</span>` : '';
+                        itemsHtml += `
+                            <div class="mptsi-jumuah-item">
+                                ${talkHtml}
+                                <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Prayer</span> ${j.prayer}</div>
+                                <div class="mptsi-jumuah-label">${j.label}${masjidHtml}</div>
+                            </div>
+                        `;
+                    }
+                    rowsHtml += `<div class="mptsi-jumuah-row">${itemsHtml}</div>`;
                 }
                 jumuahHtml = `
                     <div class="mptsi-jumuah">
-                        <div class="mptsi-jumuah-grid">${jumuahItems}</div>
+                        <div class="mptsi-jumuah-grid">${rowsHtml}</div>
                     </div>
                 `;
             }
@@ -526,9 +541,35 @@
                     CONFIG.masjidId2 ? fetchMasjidData(CONFIG.masjidId2) : Promise.resolve(null)
                 ]);
 
-                // Debug: log the API response to see the format
-                console.log('API Response for Masjid 1:', data1);
-                if (data2) console.log('API Response for Masjid 2:', data2);
+                // Pretty-print prayer data for debugging
+                function logMasjidData(label, data) {
+                    if (!data) return;
+                    const jumuahEntries = {};
+                    if (data.jumma && Array.isArray(data.jumma)) {
+                        data.jumma.forEach((j, i) => {
+                            jumuahEntries[`Jumu'ah ${i + 1}`] = { Talk: formatTime(j.azan_time), Prayer: formatTime(j.iqama_time) };
+                        });
+                    } else {
+                        for (let n = 1; n <= 3; n++) {
+                            const prayer = formatTime(data[`jumma${n}_iqama`]);
+                            if (prayer && prayer !== '-') {
+                                const talk = formatTime(data[`jumma${n}_azan`]) || formatTime(data[`jumma${n}_start_time`]);
+                                jumuahEntries[`Jumu'ah ${n}`] = { Talk: talk, Prayer: prayer };
+                            }
+                        }
+                    }
+                    console.log(`Data from ${label}:`, {
+                        Fajr: { Azan: formatTime(data.fajr_start_time), Iqamah: formatTime(data.fajr_iqama_time) },
+                        Dhuhr: { Azan: formatTime(data.zuhr_start_time), Iqamah: formatTime(data.zuhr_iqama_time) },
+                        Asr: { Azan: formatTime(data.asr_start_time), Iqamah: formatTime(data.asr_iqama_time) },
+                        Maghrib: { Azan: formatTime(data.magrib_start_time), Iqamah: formatTime(data.magrib_iqama_time) },
+                        Isha: { Azan: formatTime(data.isha_start_time), Iqamah: formatTime(data.isha_iqama_time) },
+                        Sunrise: formatTime(data.shuruq),
+                        ...jumuahEntries
+                    });
+                }
+                logMasjidData(CONFIG.masjidName1 || 'Masjid 1', data1);
+                if (data2) logMasjidData(CONFIG.masjidName2 || 'Masjid 2', data2);
 
                 // Only render once data is loaded
                 if (data1) {
