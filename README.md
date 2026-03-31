@@ -2,7 +2,7 @@
 
 A WordPress plugin that displays Islamic prayer times (Salah) and Iqamah timings using the Masjidi API. Supports single or dual masjid display with a modern, responsive design.
 
-**Version:** 2.0.2
+**Version:** 2.0.4
 **Author:** Masjidi
 **License:** GPLv2+
 **Requires WordPress:** 5.0+
@@ -181,6 +181,14 @@ masjidi/
 - Server access to `api.masjidiapp.com`
 
 ## Changelog
+
+### 2.0.4
+- Fixed dual masjid Jumu'ah display: shows separate entries with masjid names when times differ
+- Full support for 3rd Jumu'ah using the array API format
+- Jumu'ah layout wraps into rows grouped by prayer number
+
+### 2.0.3
+- Added Ramadan timetable support
 
 ### 2.0.2
 - Fixed minor styling issues

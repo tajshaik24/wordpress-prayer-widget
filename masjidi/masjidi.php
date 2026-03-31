@@ -6,7 +6,7 @@
  * @wordpress-plugin
  * Plugin Name:       Prayer Times Widget
  * Description:       Display prayer times from Masjidi API for one or two masjids. Use the shortcode [masjidi_prayer_times] or the widget.
- * Version:           2.0.0
+ * Version:           2.0.4
  * Author:            Masjidi
  * Author URI:        https://icfbayarea.com/
  * License:           GPL-2.0+

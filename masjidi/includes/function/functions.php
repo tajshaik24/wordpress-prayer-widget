@@ -5,10 +5,8 @@
  * Description: Display prayer times from Masjidi API for one or two masjids
  * Author: Masjidal
  * Author URI: https://icfbayarea.com/
- * Version: 2.0.0
+ * Version: 2.0.4
  */
-
-error_reporting(0);
 
 /**
  * Fetch prayer times from Masjidi API
@@ -20,7 +18,7 @@ if (!function_exists("mptsi_fetch_masjidi_data")) {
         }
 
         // Fetch from Masjidi API (no caching - always fetch fresh data)
-        $url = "https://api.masjidiapp.com/v2/masjids/{$masjid_id}";
+        $url = "https://api.masjidiapp.com/v2/masjids/{$masjid_id}?_t=" . time();
 
         // API key - get from options or use default test key
         $api_key = get_option('masjidi_api_key', '123-test-key');
@@ -209,6 +207,12 @@ if (!function_exists("mptsi_get_active_prayer")) {
  */
 if (!function_exists("mptsi_masjidi_prayer_times_shortcode")) {
     function mptsi_masjidi_prayer_times_shortcode($atts) {
+        // Tell WordPress caching plugins not to cache this page
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
+        }
+        nocache_headers();
+
         // Get settings
         $masjid_id_1 = get_option('masjid_id_1', get_option('masjid_id', '3443'));
         $masjid_id_2 = get_option('masjid_id_2', '');
@@ -288,9 +292,11 @@ if (!function_exists("mptsi_masjidi_prayer_times_shortcode")) {
             .mptsi-alert, .mptsi-alert * { color: <?php echo esc_attr($highlighted_text_color); ?> !important; }
             .mptsi-header .mptsi-alert { margin: 10px 0 0 0; padding: 8px 12px; font-size: 11px; border-radius: 6px; }
             .mptsi-jumuah { padding: 12px 15px; border-top: 1px solid #eee; }
-            .mptsi-jumuah-grid { display: flex; justify-content: center; gap: 0; flex-wrap: nowrap; }
-            .mptsi-jumuah-item { text-align: center; padding: 4px 14px; flex-shrink: 0; }
-            .mptsi-jumuah-item:not(:last-child) { border-right: 1px solid #ddd; }
+            .mptsi-jumuah-grid { display: flex; flex-direction: column; align-items: center; gap: 0; }
+            .mptsi-jumuah-row { display: flex; justify-content: center; gap: 0; width: 100%; }
+            .mptsi-jumuah-row:not(:last-child) { border-bottom: 1px solid #eee; margin-bottom: 8px; padding-bottom: 8px; }
+            .mptsi-jumuah-item { text-align: center; padding: 4px 14px; flex: 1; }
+            .mptsi-jumuah-row .mptsi-jumuah-item:not(:last-child) { border-right: 1px solid #ddd; }
             .mptsi-jumuah-time { font-size: 16px; font-weight: 600; color: #1a1a1a; }
             .mptsi-jumuah-label { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 0.3px; margin-top: 2px; }
             .mptsi-sun { display: flex; justify-content: space-between; padding: 10px 15px; background: #f8f9fa; border-top: 1px solid #eee; }
@@ -369,13 +375,7 @@ if (!function_exists("mptsi_masjidi_prayer_times_shortcode")) {
                     $start_time = isset($data1->$start) ? mptsi_format_time($data1->$start) : '-';
                     $iqama_time_1 = isset($data1->$iqama) ? mptsi_format_time($data1->$iqama) : '-';
 
-                    // For Maghrib, use the Azan time as the Iqamah time for both masjids
-                    if ($key === 'maghrib') {
-                        $iqama_time_1 = $start_time;
-                        $iqama_time_2 = $start_time;
-                    } else {
-                        $iqama_time_2 = ($data2 && isset($data2->$iqama)) ? mptsi_format_time($data2->$iqama) : '-';
-                    }
+                    $iqama_time_2 = ($data2 && isset($data2->$iqama)) ? mptsi_format_time($data2->$iqama) : '-';
 
                     $is_active = ($active_prayer === $key);
                 ?>
@@ -402,94 +402,95 @@ if (!function_exists("mptsi_masjidi_prayer_times_shortcode")) {
             <?php endif; ?>
             
             <?php
-            // Jumuah times - get prayer (iqama) and talk (azan) times from both masjids
-            // Prayer times (iqama)
-            $j1_prayer_m1 = isset($data1->jumma1_iqama) && !empty($data1->jumma1_iqama) ? mptsi_format_time($data1->jumma1_iqama) : '';
-            $j2_prayer_m1 = isset($data1->jumma2_iqama) && !empty($data1->jumma2_iqama) ? mptsi_format_time($data1->jumma2_iqama) : '';
-            $j3_prayer_m1 = isset($data1->jumma3_iqama) && !empty($data1->jumma3_iqama) ? mptsi_format_time($data1->jumma3_iqama) : '';
+            // Helper: extract jumuah data from a masjid, supporting both array and legacy formats
+            function mptsi_get_jumuah_from_masjid($data) {
+                $results = [];
+                if (!$data) return $results;
 
-            // Talk times (azan) - try jumma_azan first, then jumma_start_time
-            $j1_talk_m1 = '';
-            if (isset($data1->jumma1_azan) && !empty($data1->jumma1_azan)) {
-                $j1_talk_m1 = mptsi_format_time($data1->jumma1_azan);
-            } elseif (isset($data1->jumma1_start_time) && !empty($data1->jumma1_start_time)) {
-                $j1_talk_m1 = mptsi_format_time($data1->jumma1_start_time);
+                // Check for array format first (new API format)
+                if (isset($data->jumma) && is_array($data->jumma) && count($data->jumma) > 0) {
+                    foreach ($data->jumma as $j) {
+                        $prayer = isset($j->iqama_time) && !empty($j->iqama_time) ? mptsi_format_time($j->iqama_time) : '';
+                        $talk = isset($j->azan_time) && !empty($j->azan_time) ? mptsi_format_time($j->azan_time) : '';
+                        $results[] = ['prayer' => $prayer, 'talk' => $talk];
+                    }
+                } else {
+                    // Fallback to legacy format (jumma1_iqama, jumma2_iqama, etc.)
+                    for ($n = 1; $n <= 3; $n++) {
+                        $iqama_field = "jumma{$n}_iqama";
+                        $azan_field = "jumma{$n}_azan";
+                        $start_field = "jumma{$n}_start_time";
+
+                        $prayer = isset($data->$iqama_field) && !empty($data->$iqama_field) ? mptsi_format_time($data->$iqama_field) : '';
+                        $talk = '';
+                        if (isset($data->$azan_field) && !empty($data->$azan_field)) {
+                            $talk = mptsi_format_time($data->$azan_field);
+                        } elseif (isset($data->$start_field) && !empty($data->$start_field)) {
+                            $talk = mptsi_format_time($data->$start_field);
+                        }
+                        $results[] = ['prayer' => $prayer, 'talk' => $talk];
+                    }
+                }
+                return $results;
             }
 
-            $j2_talk_m1 = '';
-            if (isset($data1->jumma2_azan) && !empty($data1->jumma2_azan)) {
-                $j2_talk_m1 = mptsi_format_time($data1->jumma2_azan);
-            } elseif (isset($data1->jumma2_start_time) && !empty($data1->jumma2_start_time)) {
-                $j2_talk_m1 = mptsi_format_time($data1->jumma2_start_time);
-            }
-
-            $j3_talk_m1 = '';
-            if (isset($data1->jumma3_azan) && !empty($data1->jumma3_azan)) {
-                $j3_talk_m1 = mptsi_format_time($data1->jumma3_azan);
-            } elseif (isset($data1->jumma3_start_time) && !empty($data1->jumma3_start_time)) {
-                $j3_talk_m1 = mptsi_format_time($data1->jumma3_start_time);
-            }
-
-            $j1_prayer_m2 = ($data2 && isset($data2->jumma1_iqama) && !empty($data2->jumma1_iqama)) ? mptsi_format_time($data2->jumma1_iqama) : '';
-            $j2_prayer_m2 = ($data2 && isset($data2->jumma2_iqama) && !empty($data2->jumma2_iqama)) ? mptsi_format_time($data2->jumma2_iqama) : '';
-            $j3_prayer_m2 = ($data2 && isset($data2->jumma3_iqama) && !empty($data2->jumma3_iqama)) ? mptsi_format_time($data2->jumma3_iqama) : '';
+            $jumuah_m1 = mptsi_get_jumuah_from_masjid($data1);
+            $jumuah_m2 = mptsi_get_jumuah_from_masjid($data2);
+            $max_jumuah = max(count($jumuah_m1), count($jumuah_m2));
 
             // Build array of all jumuah times with labels
             $jumuah_times = [];
 
-            // Jumu'ah 1
-            $j1_m1_valid = !empty($j1_prayer_m1) && $j1_prayer_m1 !== '-';
-            $j1_m2_valid = !empty($j1_prayer_m2) && $j1_prayer_m2 !== '-';
-            if ($j1_m1_valid || $j1_m2_valid) {
-                if ($j1_m1_valid && $j1_m2_valid) {
-                    $jumuah_times[] = ['talk' => $j1_talk_m1, 'prayer' => $j1_prayer_m1, 'label' => "Jumu'ah 1", 'masjid' => ''];
-                } elseif ($j1_m1_valid) {
-                    $jumuah_times[] = ['talk' => $j1_talk_m1, 'prayer' => $j1_prayer_m1, 'label' => "Jumu'ah 1", 'masjid' => $masjid_name_1];
-                } else {
-                    $jumuah_times[] = ['talk' => '', 'prayer' => $j1_prayer_m2, 'label' => "Jumu'ah 1", 'masjid' => $masjid_name_2];
+            for ($i = 0; $i < $max_jumuah; $i++) {
+                $m1 = isset($jumuah_m1[$i]) ? $jumuah_m1[$i] : ['prayer' => '', 'talk' => ''];
+                $m2 = isset($jumuah_m2[$i]) ? $jumuah_m2[$i] : ['prayer' => '', 'talk' => ''];
+                $m1_valid = !empty($m1['prayer']) && $m1['prayer'] !== '-';
+                $m2_valid = !empty($m2['prayer']) && $m2['prayer'] !== '-';
+                $num = $i + 1;
+
+                if ($m1_valid && $m2_valid) {
+                    if ($m1['prayer'] === $m2['prayer'] && $m1['talk'] === $m2['talk']) {
+                        $jumuah_times[] = ['talk' => $m1['talk'], 'prayer' => $m1['prayer'], 'label' => "Jumu'ah {$num}", 'masjid' => ''];
+                    } else {
+                        $jumuah_times[] = ['talk' => $m1['talk'], 'prayer' => $m1['prayer'], 'label' => "Jumu'ah {$num}", 'masjid' => $masjid_name_1];
+                        $jumuah_times[] = ['talk' => $m2['talk'], 'prayer' => $m2['prayer'], 'label' => "Jumu'ah {$num}", 'masjid' => $masjid_name_2];
+                    }
+                } elseif ($m1_valid) {
+                    $jumuah_times[] = ['talk' => $m1['talk'], 'prayer' => $m1['prayer'], 'label' => "Jumu'ah {$num}", 'masjid' => $masjid_name_1];
+                } elseif ($m2_valid) {
+                    $jumuah_times[] = ['talk' => $m2['talk'], 'prayer' => $m2['prayer'], 'label' => "Jumu'ah {$num}", 'masjid' => $masjid_name_2];
                 }
             }
 
-            // Jumu'ah 2
-            $j2_m1_valid = !empty($j2_prayer_m1) && $j2_prayer_m1 !== '-';
-            $j2_m2_valid = !empty($j2_prayer_m2) && $j2_prayer_m2 !== '-';
-            if ($j2_m1_valid || $j2_m2_valid) {
-                if ($j2_m1_valid && $j2_m2_valid) {
-                    $jumuah_times[] = ['talk' => $j2_talk_m1, 'prayer' => $j2_prayer_m1, 'label' => "Jumu'ah 2", 'masjid' => ''];
-                } elseif ($j2_m1_valid) {
-                    $jumuah_times[] = ['talk' => $j2_talk_m1, 'prayer' => $j2_prayer_m1, 'label' => "Jumu'ah 2", 'masjid' => $masjid_name_1];
+            // Group jumuah times by label so paired masjids stay on the same row
+            $jumuah_rows = [];
+            $current_label = null;
+            $current_group = [];
+            foreach ($jumuah_times as $j) {
+                if ($j['label'] !== $current_label) {
+                    if (!empty($current_group)) $jumuah_rows[] = $current_group;
+                    $current_group = [$j];
+                    $current_label = $j['label'];
                 } else {
-                    $jumuah_times[] = ['talk' => '', 'prayer' => $j2_prayer_m2, 'label' => "Jumu'ah 2", 'masjid' => $masjid_name_2];
+                    $current_group[] = $j;
                 }
             }
+            if (!empty($current_group)) $jumuah_rows[] = $current_group;
 
-            // Jumu'ah 3
-            $j3_m1_valid = !empty($j3_prayer_m1) && $j3_prayer_m1 !== '-';
-            $j3_m2_valid = !empty($j3_prayer_m2) && $j3_prayer_m2 !== '-';
-            if ($j3_m1_valid || $j3_m2_valid) {
-                if ($j3_m1_valid && $j3_m2_valid) {
-                    $jumuah_times[] = ['talk' => $j3_talk_m1, 'prayer' => $j3_prayer_m1, 'label' => "Jumu'ah 3", 'masjid' => ''];
-                } elseif ($j3_m1_valid) {
-                    $jumuah_times[] = ['talk' => $j3_talk_m1, 'prayer' => $j3_prayer_m1, 'label' => "Jumu'ah 3", 'masjid' => $masjid_name_1];
-                } else {
-                    $jumuah_times[] = ['talk' => '', 'prayer' => $j3_prayer_m2, 'label' => "Jumu'ah 3", 'masjid' => $masjid_name_2];
-                }
-            }
-
-            if (!empty($jumuah_times)):
-            ?>
+            if (!empty($jumuah_rows)): ?>
             <div class="mptsi-jumuah">
                 <div class="mptsi-jumuah-grid">
-                    <?php foreach ($jumuah_times as $j): ?>
-                    <div class="mptsi-jumuah-item">
-                        <?php if (!empty($j['talk']) && $j['talk'] !== '-'): ?>
-                        <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Talk</span> <?php echo esc_html($j['talk']); ?></div>
-                        <?php endif; ?>
-                        <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Prayer</span> <?php echo esc_html($j['prayer']); ?></div>
-                        <div class="mptsi-jumuah-label"><?php echo esc_html($j['label']); ?></div>
-                        <?php if (!empty($j['masjid'])): ?>
-                        <div style="font-size: 9px; color: #0066cc; margin-top: 2px;"><?php echo esc_html($j['masjid']); ?></div>
-                        <?php endif; ?>
+                    <?php foreach ($jumuah_rows as $row): ?>
+                    <div class="mptsi-jumuah-row">
+                        <?php foreach ($row as $j): ?>
+                        <div class="mptsi-jumuah-item">
+                            <?php if (!empty($j['talk']) && $j['talk'] !== '-'): ?>
+                            <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Talk</span> <?php echo esc_html($j['talk']); ?></div>
+                            <?php endif; ?>
+                            <div class="mptsi-jumuah-time"><span style="font-size: 11px; font-weight: 400; color: #666;">Prayer</span> <?php echo esc_html($j['prayer']); ?></div>
+                            <div class="mptsi-jumuah-label"><?php echo esc_html($j['label']); ?><?php if (!empty($j['masjid'])): ?> <span style="font-size: 9px; color: #0066cc;">(<?php echo esc_html($j['masjid']); ?>)</span><?php endif; ?></div>
+                        </div>
+                        <?php endforeach; ?>
                     </div>
                     <?php endforeach; ?>
                 </div>
